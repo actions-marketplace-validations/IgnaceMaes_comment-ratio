@@ -1,4 +1,4 @@
-import { type Analysis, type FileDelta, fileDensity, formatPercent } from "./analyze.js";
+import { type Analysis, type FileDelta, fileRatio, formatPercent } from "./analyze.js";
 
 /** Hidden marker used to find and update the sticky pull request comment. */
 export const COMMENT_MARKER = "<!-- comment-ratio -->";
@@ -20,13 +20,13 @@ const STATUS_LABEL = {
 
 /** Render the analysis as GitHub-flavored Markdown for comments and job summaries. */
 export function renderMarkdown(analysis: Analysis, options: ReportOptions = {}): string {
-  const { totals, density, maxDensity, verdict } = analysis;
+  const { totals, ratio, maxRatio, verdict } = analysis;
   const label = STATUS_LABEL[verdict.status];
   const maxFiles = options.maxFiles ?? 50;
 
   const lines: string[] = [];
   lines.push(COMMENT_MARKER);
-  lines.push(`## ${label.icon} Comment Density: ${label.text}`);
+  lines.push(`## ${label.icon} Comment Ratio: ${label.text}`);
   lines.push("");
   lines.push(verdict.reason);
   lines.push("");
@@ -39,12 +39,12 @@ export function renderMarkdown(analysis: Analysis, options: ReportOptions = {}):
   lines.push(`| **Net** | ${signed(totals.netCode)} | ${signed(totals.netComments)} |`);
   lines.push("");
   lines.push(
-    `**Comment density** ${formatPercent(density)} &nbsp;·&nbsp; **Limit** ${formatPercent(maxDensity)}`,
+    `**Comment ratio** ${formatPercent(ratio)} &nbsp;·&nbsp; **Limit** ${formatPercent(maxRatio)}`,
   );
 
   if (analysis.files.length > 0) {
     lines.push("");
-    lines.push(renderFileTable(analysis.files, maxDensity, maxFiles));
+    lines.push(renderFileTable(analysis.files, maxRatio, maxFiles));
   }
 
   lines.push("");
@@ -52,22 +52,22 @@ export function renderMarkdown(analysis: Analysis, options: ReportOptions = {}):
   return `${lines.join("\n")}\n`;
 }
 
-function renderFileTable(files: FileDelta[], maxDensity: number, maxFiles: number): string {
+function renderFileTable(files: FileDelta[], maxRatio: number, maxFiles: number): string {
   const shown = files.slice(0, maxFiles);
   const hidden = files.length - shown.length;
   const lines: string[] = [];
   lines.push("<details>");
   lines.push(`<summary>${files.length} file${files.length === 1 ? "" : "s"} analyzed</summary>`);
   lines.push("");
-  lines.push("| File | Language | Code Δ | Comments Δ | Density |");
+  lines.push("| File | Language | Code Δ | Comments Δ | Ratio |");
   lines.push("|:--|:--|--:|--:|--:|");
   for (const file of shown) {
     const name = file.previousPath ? `${file.previousPath} → ${file.path}` : file.path;
-    const density = fileDensity(file);
-    const flag = density !== undefined && density > maxDensity ? " ⚠️" : "";
+    const ratio = fileRatio(file);
+    const flag = ratio !== undefined && ratio > maxRatio ? " ⚠️" : "";
     lines.push(
       `| \`${escapePipes(name)}\` | ${file.language} | ${signed(file.codeDelta)} | ` +
-        `${signed(file.commentsDelta)} | ${density === undefined ? "–" : formatPercent(density)}${flag} |`,
+        `${signed(file.commentsDelta)} | ${ratio === undefined ? "–" : formatPercent(ratio)}${flag} |`,
     );
   }
   if (hidden > 0) {
@@ -87,7 +87,7 @@ function renderFooter(options: ReportOptions): string {
   parts.push(
     `counted with [tokei](https://github.com/XAMPPRocky/tokei)${options.tokeiVersion ? ` ${options.tokeiVersion}` : ""}`,
   );
-  return `<sub>Density is the share of comment lines among all lines added. Lines are counted per changed file before and after the change; positive deltas are summed. ${capitalize(parts.join(", "))}.</sub>`;
+  return `<sub>The ratio is the share of comment lines among all lines added. Lines are counted per changed file before and after the change; positive deltas are summed. ${capitalize(parts.join(", "))}.</sub>`;
 }
 
 function signed(value: number): string {

@@ -24,7 +24,7 @@ describe("renderMarkdown", () => {
       changes: [modified("src/a.ts"), modified("src/b|c.ts")],
       base: [stats("src/a.ts", 10, 5), stats("src/b|c.ts", 100, 0)],
       head: [stats("src/a.ts", 110, 105), stats("src/b|c.ts", 90, 0)],
-      maxDensity: 25,
+      maxRatio: 0.25,
       minLinesAdded: 0,
     });
     const markdown = renderMarkdown(analysis, {
@@ -33,11 +33,11 @@ describe("renderMarkdown", () => {
     });
 
     expect(markdown.startsWith(COMMENT_MARKER)).toBe(true);
-    expect(markdown).toContain("## ❌ Comment Density: Failed");
+    expect(markdown).toContain("## ❌ Comment Ratio: Failed");
     expect(markdown).toContain("| **Added** | +100 | +100 |");
     expect(markdown).toContain("| **Removed** | −10 | 0 |");
     expect(markdown).toContain("| **Net** | +90 | +100 |");
-    expect(markdown).toContain("**Comment density** 50% &nbsp;·&nbsp; **Limit** 25%");
+    expect(markdown).toContain("**Comment ratio** 50% &nbsp;·&nbsp; **Limit** 25%");
     expect(markdown).toContain("<summary>2 files analyzed</summary>");
     expect(markdown).toContain("| `src/a.ts` | TypeScript | +100 | +100 | 50% ⚠️ |");
     expect(markdown).toContain("| `src/b\\|c.ts` | TypeScript | −10 | 0 | – |");
@@ -47,9 +47,9 @@ describe("renderMarkdown", () => {
   });
 
   it("renders a skipped report without a file table", () => {
-    const analysis = analyze({ changes: [], base: [], head: [], maxDensity: 25, minLinesAdded: 0 });
+    const analysis = analyze({ changes: [], base: [], head: [], maxRatio: 0.25, minLinesAdded: 0 });
     const markdown = renderMarkdown(analysis);
-    expect(markdown).toContain("⏭️ Comment Density: Skipped");
+    expect(markdown).toContain("⏭️ Comment Ratio: Skipped");
     expect(markdown).not.toContain("<details>");
   });
 
@@ -59,7 +59,7 @@ describe("renderMarkdown", () => {
       changes,
       base: [],
       head: changes.map((c) => stats(c.path, 10, 1)),
-      maxDensity: 25,
+      maxRatio: 0.25,
       minLinesAdded: 0,
     });
     const markdown = renderMarkdown(analysis, { maxFiles: 2 });

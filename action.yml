@@ -7,12 +7,13 @@ branding:
   color: "blue"
 
 inputs:
-  max-comment-density:
+  max-comment-ratio:
     description: >-
-      Maximum share of added lines that may be comments, as a percentage (0-100).
-      A value of 25 means "at most 1 in 4 added lines may be a comment".
+      Maximum share of added lines that may be comments, as a fraction between 0 and 1
+      (a percentage like "5%" is accepted too). The default 0.05 means "at most 1 in 20
+      added lines may be a comment".
     required: false
-    default: "25"
+    default: "0.05"
   min-lines-added:
     description: >-
       Skip the check when fewer than this many lines (code plus comments) were
@@ -44,7 +45,7 @@ inputs:
     required: false
     default: ""
   fail-on-threshold:
-    description: "Fail the job when the density exceeds the limit. Set to false to only report."
+    description: "Fail the job when the ratio exceeds the limit. Set to false to only report."
     required: false
     default: "true"
   comment:
@@ -75,12 +76,12 @@ outputs:
     description: "Lines of code added (sum of positive per-file deltas)."
   comments-added:
     description: "Lines of comments added (sum of positive per-file deltas)."
-  comment-density:
-    description: "Share of added lines that are comments, as a percentage with two decimals."
+  comment-ratio:
+    description: "Share of added lines that are comments, as a fraction with four decimals (e.g. 0.2837)."
   status:
     description: "One of pass, fail or skip. 'skip' means below min-lines-added or no countable files."
   passed:
-    description: "'true' unless the density exceeded the limit."
+    description: "'true' unless the ratio exceeded the limit."
   report:
     description: "The Markdown report that was posted to the pull request and job summary."
 

@@ -2,7 +2,7 @@
 
 exports[`renderMarkdown > renders a failing report with totals, files and footer 1`] = `
 "<!-- comment-ratio -->
-## ❌ Comment Density: Failed
+## ❌ Comment Ratio: Failed
 
 50% of the added lines are comments (100 of 200); the limit is 25%.
 
@@ -12,18 +12,18 @@ exports[`renderMarkdown > renders a failing report with totals, files and footer
 | **Removed** | −10 | 0 |
 | **Net** | +90 | +100 |
 
-**Comment density** 50% &nbsp;·&nbsp; **Limit** 25%
+**Comment ratio** 50% &nbsp;·&nbsp; **Limit** 25%
 
 <details>
 <summary>2 files analyzed</summary>
 
-| File | Language | Code Δ | Comments Δ | Density |
+| File | Language | Code Δ | Comments Δ | Ratio |
 |:--|:--|--:|--:|--:|
 | \`src/a.ts\` | TypeScript | +100 | +100 | 50% ⚠️ |
 | \`src/b\\|c.ts\` | TypeScript | −10 | 0 | – |
 
 </details>
 
-<sub>Density is the share of comment lines among all lines added. Lines are counted per changed file before and after the change; positive deltas are summed. Comparing \`0123456…fedcba9\`, counted with [tokei](https://github.com/XAMPPRocky/tokei) 12.1.2.</sub>
+<sub>The ratio is the share of comment lines among all lines added. Lines are counted per changed file before and after the change; positive deltas are summed. Comparing \`0123456…fedcba9\`, counted with [tokei](https://github.com/XAMPPRocky/tokei) 12.1.2.</sub>
 "
 `;

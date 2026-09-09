@@ -15,8 +15,8 @@ export const DEFAULT_EXCLUDED_LANGUAGES = [
 export const DEFAULT_TOKEI_VERSION = "12.1.2";
 
 export interface Inputs {
-  /** Maximum share of added lines that may be comments, in percent. */
-  maxCommentDensity: number;
+  /** Maximum share of added lines that may be comments, as a fraction (0-1). */
+  maxCommentRatio: number;
   /** Skip the check when fewer lines (code + comments) than this were added. */
   minLinesAdded: number;
   /** Glob patterns; when non-empty only matching paths are analyzed. */
@@ -27,7 +27,7 @@ export interface Inputs {
   languages: string[];
   /** tokei language names to ignore. */
   excludeLanguages: string[];
-  /** Whether exceeding the density limit fails the job. */
+  /** Whether exceeding the ratio limit fails the job. */
   failOnThreshold: boolean;
   /** Whether to post or update a sticky pull request comment. */
   comment: boolean;
@@ -48,12 +48,7 @@ export class InputError extends Error {
 
 /** Parse and validate raw action inputs. Pure so it can be unit-tested. */
 export function parseInputs(read: InputReader): Inputs {
-  const maxCommentDensity = parsePercent(read, "max-comment-density", 25);
-  if (!(maxCommentDensity >= 0 && maxCommentDensity <= 100)) {
-    throw new InputError(
-      `"max-comment-density" must be a percentage between 0 and 100, got "${read("max-comment-density")}"`,
-    );
-  }
+  const maxCommentRatio = parseRatio(read, "max-comment-ratio", 0.05);
 
   const minLinesAdded = parseNumber(read, "min-lines-added", 50);
   if (!Number.isInteger(minLinesAdded) || minLinesAdded < 0) {
@@ -67,7 +62,7 @@ export function parseInputs(read: InputReader): Inputs {
   const excludeLanguages = parseExcludeLanguages(read("exclude-languages"));
 
   return {
-    maxCommentDensity,
+    maxCommentRatio,
     minLinesAdded,
     include: parseList(read("include")),
     exclude: parseList(read("exclude")),
@@ -95,9 +90,19 @@ function optional<K extends string>(key: K, value: string): { [P in K]?: string 
   return trimmed === "" ? {} : ({ [key]: trimmed } as { [P in K]: string });
 }
 
-/** Accepts `25` or `25%`. */
-function parsePercent(read: InputReader, name: string, fallback: number): number {
-  return parseNumber((key) => read(key).trim().replace(/%$/, ""), name, fallback);
+/** Accepts a fraction like `0.05` or a percentage like `5%`; both mean 1 in 20. */
+function parseRatio(read: InputReader, name: string, fallback: number): number {
+  const raw = read(name).trim();
+  if (raw === "") return fallback;
+  const isPercent = raw.endsWith("%");
+  const value = Number(isPercent ? raw.slice(0, -1) : raw);
+  const ratio = isPercent ? value / 100 : value;
+  if (Number.isNaN(value) || ratio < 0 || ratio > 1) {
+    throw new InputError(
+      `"${name}" must be a fraction between 0 and 1 (or a percentage like "5%"), got "${raw}"`,
+    );
+  }
+  return ratio;
 }
 
 function parseNumber(read: InputReader, name: string, fallback: number): number {

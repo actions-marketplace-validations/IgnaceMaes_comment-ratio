@@ -9,7 +9,7 @@ describe("parseInputs", () => {
   it("applies defaults when nothing is set", () => {
     const inputs = parseInputs(reader({}));
     expect(inputs).toMatchObject({
-      maxCommentDensity: 25,
+      maxCommentRatio: 0.05,
       minLinesAdded: 50,
       include: [],
       exclude: [],
@@ -26,7 +26,7 @@ describe("parseInputs", () => {
   it("parses every input", () => {
     const inputs = parseInputs(
       reader({
-        "max-comment-density": "12.5%",
+        "max-comment-ratio": "12.5%",
         "min-lines-added": "0",
         include: "src/**\nlib/**",
         exclude: "**/*.test.ts, **/generated/**",
@@ -41,7 +41,7 @@ describe("parseInputs", () => {
       }),
     );
     expect(inputs).toEqual({
-      maxCommentDensity: 12.5,
+      maxCommentRatio: 0.125,
       minLinesAdded: 0,
       include: ["src/**", "lib/**"],
       exclude: ["**/*.test.ts", "**/generated/**"],
@@ -56,9 +56,11 @@ describe("parseInputs", () => {
     });
   });
 
-  it("accepts 0 and 100 as density bounds", () => {
-    expect(parseInputs(reader({ "max-comment-density": "0" })).maxCommentDensity).toBe(0);
-    expect(parseInputs(reader({ "max-comment-density": "100" })).maxCommentDensity).toBe(100);
+  it("accepts fractions and percentages for the ratio", () => {
+    expect(parseInputs(reader({ "max-comment-ratio": "0" })).maxCommentRatio).toBe(0);
+    expect(parseInputs(reader({ "max-comment-ratio": "1" })).maxCommentRatio).toBe(1);
+    expect(parseInputs(reader({ "max-comment-ratio": "0.25" })).maxCommentRatio).toBe(0.25);
+    expect(parseInputs(reader({ "max-comment-ratio": "25%" })).maxCommentRatio).toBe(0.25);
   });
 
   it('lets "none" clear the default language exclusions', () => {
@@ -70,9 +72,10 @@ describe("parseInputs", () => {
   });
 
   it.each([
-    ["max-comment-density", "-1"],
-    ["max-comment-density", "101"],
-    ["max-comment-density", "lots"],
+    ["max-comment-ratio", "-0.1"],
+    ["max-comment-ratio", "1.5"],
+    ["max-comment-ratio", "101%"],
+    ["max-comment-ratio", "lots"],
     ["min-lines-added", "-5"],
     ["min-lines-added", "1.5"],
     ["fail-on-threshold", "maybe"],

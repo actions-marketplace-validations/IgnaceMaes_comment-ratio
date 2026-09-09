@@ -21583,10 +21583,10 @@ const EMPTY_STATS = Object.freeze({
 //#region src/analyze.ts
 /**
 * Join per-file counts from both sides of the diff, compute deltas and decide
-* whether the change stays under the comment density limit. Pure: no I/O.
+* whether the change stays under the comment ratio limit. Pure: no I/O.
 */
 function analyze(options) {
-	const { changes, maxDensity, minLinesAdded } = options;
+	const { changes, maxRatio, minLinesAdded } = options;
 	const languageFilter = options.languageFilter ?? (() => true);
 	const baseStats = indexByPath(options.base);
 	const headStats = indexByPath(options.head);
@@ -21614,35 +21614,35 @@ function analyze(options) {
 	}
 	files.sort((a, b) => b.commentsDelta - a.commentsDelta || b.codeDelta - a.codeDelta || a.path.localeCompare(b.path));
 	const totals = sumTotals(files);
-	const density = commentDensity(totals.codeAdded, totals.commentsAdded);
+	const ratio = commentRatio(totals.codeAdded, totals.commentsAdded);
 	return {
 		files,
 		totals,
-		density,
-		maxDensity,
+		ratio,
+		maxRatio,
 		minLinesAdded,
 		verdict: decide({
 			totals,
-			density,
-			maxDensity,
+			ratio,
+			maxRatio,
 			minLinesAdded
 		})
 	};
 }
-/** Comment lines as a percentage of all added lines. 0 when nothing was added. */
-function commentDensity(codeAdded, commentsAdded) {
+/** Comment lines as a fraction of all added lines. 0 when nothing was added. */
+function commentRatio(codeAdded, commentsAdded) {
 	const total = codeAdded + commentsAdded;
-	return total === 0 ? 0 : commentsAdded / total * 100;
+	return total === 0 ? 0 : commentsAdded / total;
 }
-/** Density of a single file's additions, or undefined when it added nothing. */
-function fileDensity(file) {
+/** Ratio of a single file's additions, or undefined when it added nothing. */
+function fileRatio(file) {
 	const code = Math.max(file.codeDelta, 0);
 	const comments = Math.max(file.commentsDelta, 0);
 	if (code + comments === 0) return void 0;
-	return commentDensity(code, comments);
+	return commentRatio(code, comments);
 }
 function decide(input) {
-	const { totals, density, maxDensity, minLinesAdded } = input;
+	const { totals, ratio, maxRatio, minLinesAdded } = input;
 	const linesAdded = totals.codeAdded + totals.commentsAdded;
 	if (totals.filesAnalyzed === 0) return {
 		status: "skip",
@@ -21652,13 +21652,13 @@ function decide(input) {
 		status: "skip",
 		reason: `Only ${plural(linesAdded, "line")} added, below the minimum of ${minLinesAdded} for this check to apply.`
 	};
-	if (density > maxDensity) return {
+	if (ratio > maxRatio) return {
 		status: "fail",
-		reason: `${formatPercent(density)} of the added lines are comments (${totals.commentsAdded} of ${linesAdded}); the limit is ${formatPercent(maxDensity)}.`
+		reason: `${formatPercent(ratio)} of the added lines are comments (${totals.commentsAdded} of ${linesAdded}); the limit is ${formatPercent(maxRatio)}.`
 	};
 	return {
 		status: "pass",
-		reason: `${formatPercent(density)} of the added lines are comments (${totals.commentsAdded} of ${linesAdded}), within the limit of ${formatPercent(maxDensity)}.`
+		reason: `${formatPercent(ratio)} of the added lines are comments (${totals.commentsAdded} of ${linesAdded}), within the limit of ${formatPercent(maxRatio)}.`
 	};
 }
 function sumTotals(files) {
@@ -21692,9 +21692,9 @@ function toLineStats(stats) {
 		blanks: stats.blanks
 	};
 }
-/** `12.5%`, `25%`: one decimal unless the value is a whole number. */
-function formatPercent(value) {
-	const rounded = Math.round(value * 10) / 10;
+/** Format a fraction as a percentage: `0.125` -> `12.5%`, `0.25` -> `25%`. */
+function formatPercent(fraction) {
+	const rounded = Math.round(fraction * 1e3) / 10;
 	return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}%`;
 }
 function plural(count, noun) {
@@ -21721,12 +21721,12 @@ const STATUS_LABEL = {
 };
 /** Render the analysis as GitHub-flavored Markdown for comments and job summaries. */
 function renderMarkdown(analysis, options = {}) {
-	const { totals, density, maxDensity, verdict } = analysis;
+	const { totals, ratio, maxRatio, verdict } = analysis;
 	const label = STATUS_LABEL[verdict.status];
 	const maxFiles = options.maxFiles ?? 50;
 	const lines = [];
 	lines.push(COMMENT_MARKER);
-	lines.push(`## ${label.icon} Comment Density: ${label.text}`);
+	lines.push(`## ${label.icon} Comment Ratio: ${label.text}`);
 	lines.push("");
 	lines.push(verdict.reason);
 	lines.push("");
@@ -21736,29 +21736,29 @@ function renderMarkdown(analysis, options = {}) {
 	lines.push(`| **Removed** | ${signed(-totals.codeRemoved)} | ${signed(-totals.commentsRemoved)} |`);
 	lines.push(`| **Net** | ${signed(totals.netCode)} | ${signed(totals.netComments)} |`);
 	lines.push("");
-	lines.push(`**Comment density** ${formatPercent(density)} &nbsp;·&nbsp; **Limit** ${formatPercent(maxDensity)}`);
+	lines.push(`**Comment ratio** ${formatPercent(ratio)} &nbsp;·&nbsp; **Limit** ${formatPercent(maxRatio)}`);
 	if (analysis.files.length > 0) {
 		lines.push("");
-		lines.push(renderFileTable(analysis.files, maxDensity, maxFiles));
+		lines.push(renderFileTable(analysis.files, maxRatio, maxFiles));
 	}
 	lines.push("");
 	lines.push(renderFooter(options));
 	return `${lines.join("\n")}\n`;
 }
-function renderFileTable(files, maxDensity, maxFiles) {
+function renderFileTable(files, maxRatio, maxFiles) {
 	const shown = files.slice(0, maxFiles);
 	const hidden = files.length - shown.length;
 	const lines = [];
 	lines.push("<details>");
 	lines.push(`<summary>${files.length} file${files.length === 1 ? "" : "s"} analyzed</summary>`);
 	lines.push("");
-	lines.push("| File | Language | Code Δ | Comments Δ | Density |");
+	lines.push("| File | Language | Code Δ | Comments Δ | Ratio |");
 	lines.push("|:--|:--|--:|--:|--:|");
 	for (const file of shown) {
 		const name = file.previousPath ? `${file.previousPath} → ${file.path}` : file.path;
-		const density = fileDensity(file);
-		const flag = density !== void 0 && density > maxDensity ? " ⚠️" : "";
-		lines.push(`| \`${escapePipes(name)}\` | ${file.language} | ${signed(file.codeDelta)} | ${signed(file.commentsDelta)} | ${density === void 0 ? "–" : formatPercent(density)}${flag} |`);
+		const ratio = fileRatio(file);
+		const flag = ratio !== void 0 && ratio > maxRatio ? " ⚠️" : "";
+		lines.push(`| \`${escapePipes(name)}\` | ${file.language} | ${signed(file.codeDelta)} | ${signed(file.commentsDelta)} | ${ratio === void 0 ? "–" : formatPercent(ratio)}${flag} |`);
 	}
 	if (hidden > 0) {
 		lines.push("");
@@ -21772,7 +21772,7 @@ function renderFooter(options) {
 	const parts = [];
 	if (options.range) parts.push(`comparing \`${options.range.base.slice(0, 7)}…${options.range.head.slice(0, 7)}\``);
 	parts.push(`counted with [tokei](https://github.com/XAMPPRocky/tokei)${options.tokeiVersion ? ` ${options.tokeiVersion}` : ""}`);
-	return `<sub>Density is the share of comment lines among all lines added. Lines are counted per changed file before and after the change; positive deltas are summed. ${capitalize(parts.join(", "))}.</sub>`;
+	return `<sub>The ratio is the share of comment lines among all lines added. Lines are counted per changed file before and after the change; positive deltas are summed. ${capitalize(parts.join(", "))}.</sub>`;
 }
 function signed(value) {
 	if (value > 0) return `+${value}`;
@@ -24006,14 +24006,13 @@ var InputError = class extends Error {
 };
 /** Parse and validate raw action inputs. Pure so it can be unit-tested. */
 function parseInputs(read) {
-	const maxCommentDensity = parsePercent(read, "max-comment-density", 25);
-	if (!(maxCommentDensity >= 0 && maxCommentDensity <= 100)) throw new InputError(`"max-comment-density" must be a percentage between 0 and 100, got "${read("max-comment-density")}"`);
+	const maxCommentRatio = parseRatio(read, "max-comment-ratio", .05);
 	const minLinesAdded = parseNumber(read, "min-lines-added", 50);
 	if (!Number.isInteger(minLinesAdded) || minLinesAdded < 0) throw new InputError(`"min-lines-added" must be a non-negative integer, got "${read("min-lines-added")}"`);
 	const tokeiVersion = normalizeTokeiVersion(read("tokei-version") || "12.1.2");
 	const excludeLanguages = parseExcludeLanguages(read("exclude-languages"));
 	return {
-		maxCommentDensity,
+		maxCommentRatio,
 		minLinesAdded,
 		include: parseList(read("include")),
 		exclude: parseList(read("exclude")),
@@ -24038,9 +24037,15 @@ function optional(key, value) {
 	const trimmed = value.trim();
 	return trimmed === "" ? {} : { [key]: trimmed };
 }
-/** Accepts `25` or `25%`. */
-function parsePercent(read, name, fallback) {
-	return parseNumber((key) => read(key).trim().replace(/%$/, ""), name, fallback);
+/** Accepts a fraction like `0.05` or a percentage like `5%`; both mean 1 in 20. */
+function parseRatio(read, name, fallback) {
+	const raw = read(name).trim();
+	if (raw === "") return fallback;
+	const isPercent = raw.endsWith("%");
+	const value = Number(isPercent ? raw.slice(0, -1) : raw);
+	const ratio = isPercent ? value / 100 : value;
+	if (Number.isNaN(value) || ratio < 0 || ratio > 1) throw new InputError(`"${name}" must be a fraction between 0 and 1 (or a percentage like "5%"), got "${raw}"`);
+	return ratio;
 }
 function parseNumber(read, name, fallback) {
 	const raw = read(name).trim();
@@ -26262,7 +26267,7 @@ async function run() {
 			changes,
 			base,
 			head,
-			maxDensity: inputs.maxCommentDensity,
+			maxRatio: inputs.maxCommentRatio,
 			minLinesAdded: inputs.minLinesAdded,
 			languageFilter: createLanguageFilter(inputs.languages, inputs.excludeLanguages)
 		});
@@ -26287,7 +26292,7 @@ async function run() {
 function setOutputs(analysis, report = "") {
 	setOutput("code-added", analysis?.totals.codeAdded ?? 0);
 	setOutput("comments-added", analysis?.totals.commentsAdded ?? 0);
-	setOutput("comment-density", analysis ? analysis.density.toFixed(2) : "0.00");
+	setOutput("comment-ratio", analysis ? analysis.ratio.toFixed(4) : "0.0000");
 	setOutput("status", analysis?.verdict.status ?? "skip");
 	setOutput("passed", analysis ? String(analysis.verdict.status !== "fail") : "true");
 	setOutput("report", report);
@@ -26317,8 +26322,8 @@ async function publishComment(inputs, octokit, body) {
 	}
 }
 function conclude(inputs, analysis) {
-	const { verdict, totals, density, maxDensity } = analysis;
-	const headline = `${totals.codeAdded} code lines and ${totals.commentsAdded} comment lines added (density ${formatPercent(density)}, limit ${formatPercent(maxDensity)})`;
+	const { verdict, totals, ratio, maxRatio } = analysis;
+	const headline = `${totals.codeAdded} code lines and ${totals.commentsAdded} comment lines added (ratio ${formatPercent(ratio)}, limit ${formatPercent(maxRatio)})`;
 	switch (verdict.status) {
 		case "pass":
 			info(`✅ ${headline}`);
@@ -26328,7 +26333,7 @@ function conclude(inputs, analysis) {
 			return;
 		case "fail": {
 			annotateWorstFiles(analysis);
-			const message = `Comment density check failed: ${verdict.reason}`;
+			const message = `Comment ratio check failed: ${verdict.reason}`;
 			if (inputs.failOnThreshold) setFailed(message);
 			else warning(`${message} (fail-on-threshold is false, not failing the job)`);
 			return;
@@ -26339,12 +26344,12 @@ function conclude(inputs, analysis) {
 /** Point reviewers at the files that contributed most to the failure. */
 function annotateWorstFiles(analysis) {
 	const offenders = analysis.files.filter((file) => {
-		const density = fileDensity(file);
-		return density !== void 0 && density > analysis.maxDensity;
+		const ratio = fileRatio(file);
+		return ratio !== void 0 && ratio > analysis.maxRatio;
 	}).slice(0, MAX_FILE_ANNOTATIONS);
 	for (const file of offenders) {
-		const density = fileDensity(file) ?? 0;
-		warning(`+${Math.max(file.codeDelta, 0)} code / +${Math.max(file.commentsDelta, 0)} comment lines (density ${formatPercent(density)}, limit ${formatPercent(analysis.maxDensity)})`, {
+		const ratio = fileRatio(file) ?? 0;
+		warning(`+${Math.max(file.codeDelta, 0)} code / +${Math.max(file.commentsDelta, 0)} comment lines (ratio ${formatPercent(ratio)}, limit ${formatPercent(analysis.maxRatio)})`, {
 			file: file.path,
 			title: "Comment-heavy change"
 		});

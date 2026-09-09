@@ -38,10 +38,10 @@ export interface Verdict {
 export interface Analysis {
   files: FileDelta[];
   totals: Totals;
-  /** Share of added lines that are comments, in percent (0-100). */
-  density: number;
-  /** Maximum allowed density, in percent. */
-  maxDensity: number;
+  /** Share of added lines that are comments, as a fraction (0-1). */
+  ratio: number;
+  /** Maximum allowed ratio, as a fraction (0-1). */
+  maxRatio: number;
   minLinesAdded: number;
   verdict: Verdict;
 }
@@ -50,8 +50,8 @@ export interface AnalyzeOptions {
   changes: ChangedFile[];
   base: FileStats[];
   head: FileStats[];
-  /** Maximum allowed comment density, in percent. */
-  maxDensity: number;
+  /** Maximum allowed comment ratio, as a fraction (0-1). */
+  maxRatio: number;
   /** Skip the check when fewer lines (code + comments) were added. */
   minLinesAdded: number;
   languageFilter?: LanguageFilter;
@@ -59,10 +59,10 @@ export interface AnalyzeOptions {
 
 /**
  * Join per-file counts from both sides of the diff, compute deltas and decide
- * whether the change stays under the comment density limit. Pure: no I/O.
+ * whether the change stays under the comment ratio limit. Pure: no I/O.
  */
 export function analyze(options: AnalyzeOptions): Analysis {
-  const { changes, maxDensity, minLinesAdded } = options;
+  const { changes, maxRatio, minLinesAdded } = options;
   const languageFilter = options.languageFilter ?? (() => true);
   const baseStats = indexByPath(options.base);
   const headStats = indexByPath(options.head);
@@ -102,33 +102,33 @@ export function analyze(options: AnalyzeOptions): Analysis {
   );
 
   const totals = sumTotals(files);
-  const density = commentDensity(totals.codeAdded, totals.commentsAdded);
-  const verdict = decide({ totals, density, maxDensity, minLinesAdded });
+  const ratio = commentRatio(totals.codeAdded, totals.commentsAdded);
+  const verdict = decide({ totals, ratio, maxRatio, minLinesAdded });
 
-  return { files, totals, density, maxDensity, minLinesAdded, verdict };
+  return { files, totals, ratio, maxRatio, minLinesAdded, verdict };
 }
 
-/** Comment lines as a percentage of all added lines. 0 when nothing was added. */
-export function commentDensity(codeAdded: number, commentsAdded: number): number {
+/** Comment lines as a fraction of all added lines. 0 when nothing was added. */
+export function commentRatio(codeAdded: number, commentsAdded: number): number {
   const total = codeAdded + commentsAdded;
-  return total === 0 ? 0 : (commentsAdded / total) * 100;
+  return total === 0 ? 0 : commentsAdded / total;
 }
 
-/** Density of a single file's additions, or undefined when it added nothing. */
-export function fileDensity(file: FileDelta): number | undefined {
+/** Ratio of a single file's additions, or undefined when it added nothing. */
+export function fileRatio(file: FileDelta): number | undefined {
   const code = Math.max(file.codeDelta, 0);
   const comments = Math.max(file.commentsDelta, 0);
   if (code + comments === 0) return undefined;
-  return commentDensity(code, comments);
+  return commentRatio(code, comments);
 }
 
 function decide(input: {
   totals: Totals;
-  density: number;
-  maxDensity: number;
+  ratio: number;
+  maxRatio: number;
   minLinesAdded: number;
 }): Verdict {
-  const { totals, density, maxDensity, minLinesAdded } = input;
+  const { totals, ratio, maxRatio, minLinesAdded } = input;
   const linesAdded = totals.codeAdded + totals.commentsAdded;
 
   if (totals.filesAnalyzed === 0) {
@@ -142,19 +142,19 @@ function decide(input: {
         `below the minimum of ${minLinesAdded} for this check to apply.`,
     };
   }
-  if (density > maxDensity) {
+  if (ratio > maxRatio) {
     return {
       status: "fail",
       reason:
-        `${formatPercent(density)} of the added lines are comments ` +
-        `(${totals.commentsAdded} of ${linesAdded}); the limit is ${formatPercent(maxDensity)}.`,
+        `${formatPercent(ratio)} of the added lines are comments ` +
+        `(${totals.commentsAdded} of ${linesAdded}); the limit is ${formatPercent(maxRatio)}.`,
     };
   }
   return {
     status: "pass",
     reason:
-      `${formatPercent(density)} of the added lines are comments ` +
-      `(${totals.commentsAdded} of ${linesAdded}), within the limit of ${formatPercent(maxDensity)}.`,
+      `${formatPercent(ratio)} of the added lines are comments ` +
+      `(${totals.commentsAdded} of ${linesAdded}), within the limit of ${formatPercent(maxRatio)}.`,
   };
 }
 
@@ -188,9 +188,9 @@ function toLineStats(stats: FileStats | undefined): LineStats {
   return { code: stats.code, comments: stats.comments, blanks: stats.blanks };
 }
 
-/** `12.5%`, `25%`: one decimal unless the value is a whole number. */
-export function formatPercent(value: number): string {
-  const rounded = Math.round(value * 10) / 10;
+/** Format a fraction as a percentage: `0.125` -> `12.5%`, `0.25` -> `25%`. */
+export function formatPercent(fraction: number): string {
+  const rounded = Math.round(fraction * 1000) / 10;
   return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}%`;
 }
 

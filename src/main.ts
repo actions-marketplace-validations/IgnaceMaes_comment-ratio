@@ -3,7 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as core from "@actions/core";
 import * as github from "@actions/github";
-import { analyze, type Analysis, fileDensity, formatPercent } from "./analyze.js";
+import { analyze, type Analysis, fileRatio, formatPercent } from "./analyze.js";
 import { upsertComment } from "./comment.js";
 import { createLanguageFilter, createPathFilter } from "./filter.js";
 import { listChangedFiles, materialize } from "./git.js";
@@ -58,7 +58,7 @@ export async function run(): Promise<void> {
       changes,
       base,
       head,
-      maxDensity: inputs.maxCommentDensity,
+      maxRatio: inputs.maxCommentRatio,
       minLinesAdded: inputs.minLinesAdded,
       languageFilter: createLanguageFilter(inputs.languages, inputs.excludeLanguages),
     });
@@ -80,7 +80,7 @@ export async function run(): Promise<void> {
 function setOutputs(analysis: Analysis | undefined, report = ""): void {
   core.setOutput("code-added", analysis?.totals.codeAdded ?? 0);
   core.setOutput("comments-added", analysis?.totals.commentsAdded ?? 0);
-  core.setOutput("comment-density", analysis ? analysis.density.toFixed(2) : "0.00");
+  core.setOutput("comment-ratio", analysis ? analysis.ratio.toFixed(4) : "0.0000");
   core.setOutput("status", analysis?.verdict.status ?? "skip");
   core.setOutput("passed", analysis ? String(analysis.verdict.status !== "fail") : "true");
   core.setOutput("report", report);
@@ -115,10 +115,10 @@ async function publishComment(
 }
 
 function conclude(inputs: Inputs, analysis: Analysis): void {
-  const { verdict, totals, density, maxDensity } = analysis;
+  const { verdict, totals, ratio, maxRatio } = analysis;
   const headline =
     `${totals.codeAdded} code lines and ${totals.commentsAdded} comment lines added ` +
-    `(density ${formatPercent(density)}, limit ${formatPercent(maxDensity)})`;
+    `(ratio ${formatPercent(ratio)}, limit ${formatPercent(maxRatio)})`;
 
   switch (verdict.status) {
     case "pass":
@@ -129,7 +129,7 @@ function conclude(inputs: Inputs, analysis: Analysis): void {
       return;
     case "fail": {
       annotateWorstFiles(analysis);
-      const message = `Comment density check failed: ${verdict.reason}`;
+      const message = `Comment ratio check failed: ${verdict.reason}`;
       if (inputs.failOnThreshold) {
         core.setFailed(message);
       } else {
@@ -146,15 +146,15 @@ function conclude(inputs: Inputs, analysis: Analysis): void {
 function annotateWorstFiles(analysis: Analysis): void {
   const offenders = analysis.files
     .filter((file) => {
-      const density = fileDensity(file);
-      return density !== undefined && density > analysis.maxDensity;
+      const ratio = fileRatio(file);
+      return ratio !== undefined && ratio > analysis.maxRatio;
     })
     .slice(0, MAX_FILE_ANNOTATIONS);
   for (const file of offenders) {
-    const density = fileDensity(file) ?? 0;
+    const ratio = fileRatio(file) ?? 0;
     core.warning(
       `+${Math.max(file.codeDelta, 0)} code / +${Math.max(file.commentsDelta, 0)} comment lines ` +
-        `(density ${formatPercent(density)}, limit ${formatPercent(analysis.maxDensity)})`,
+        `(ratio ${formatPercent(ratio)}, limit ${formatPercent(analysis.maxRatio)})`,
       { file: file.path, title: "Comment-heavy change" },
     );
   }

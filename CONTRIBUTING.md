@@ -32,7 +32,7 @@ src/range.ts        Which commits to compare, merge-base resolution
 src/git.ts          Changed-file listing and blob materialization
 src/tokei/          Download/cache tokei and parse its JSON
 src/filter.ts       Include/exclude globs and language filters
-src/analyze.ts      Pure delta/density/verdict computation
+src/analyze.ts      Pure delta/ratio/verdict computation
 src/report.ts       Markdown rendering
 src/comment.ts      Sticky pull request comment
 dist/index.js       Bundled output, committed (see below)
@@ -65,7 +65,7 @@ cd path/to/some/repo
 echo '{"pull_request":{"number":1,"base":{"sha":"<base>"},"head":{"sha":"<head>"}}}' > /tmp/event.json
 env GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH=/tmp/event.json \
     GITHUB_REPOSITORY=acme/demo GITHUB_OUTPUT=/tmp/out.txt \
-    INPUT_COMMENT=false "INPUT_TOKEI-VERSION=system" "INPUT_MAX-COMMENT-DENSITY=25" \
+    INPUT_COMMENT=false "INPUT_TOKEI-VERSION=system" "INPUT_MAX-COMMENT-RATIO=0.05" \
     node path/to/comment-ratio/dist/index.js
 ```
 
