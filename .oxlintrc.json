@@ -8,16 +8,33 @@
     "pedantic": "off",
     "style": "off"
   },
-  "env": { "node": true, "es2024": true },
+  "env": {
+    "node": true,
+    "es2024": true
+  },
   "rules": {
     "no-console": "error",
     "no-await-in-loop": "off",
-    "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
     "typescript/no-non-null-assertion": "error",
     "typescript/consistent-type-imports": "error",
     "unicorn/prefer-node-protocol": "error",
     "unicorn/no-null": "off",
     "import/no-cycle": "error"
   },
-  "ignorePatterns": ["dist/**", "node_modules/**", "coverage/**"]
+  "ignorePatterns": ["dist/**", "node_modules/**", "coverage/**"],
+  "overrides": [
+    {
+      "files": ["scripts/**"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ]
 }

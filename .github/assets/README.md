@@ -37,5 +37,19 @@ colour. It carries the same numbers as the example report in the README.
 
 [Geist](https://vercel.com/font) for the wordmark and prose, Geist Mono for
 figures and verdicts, both OFL. All text is converted to outlines, so the SVGs
-render identically everywhere and load no fonts. Editing the copy means
-regenerating the file, not editing its paths.
+render identically everywhere and load no fonts.
+
+## Regenerating
+
+Everything here is generated. Edit
+[`scripts/generate-assets.mjs`](../../scripts/generate-assets.mjs) and run:
+
+```sh
+pnpm assets
+```
+
+Copy and numbers live in that script, never in the SVG paths — the text is
+outlined, so there is nothing editable in the output. The meter's numbers come
+from the `REPORT` constant, which mirrors the example report in the root README;
+change one and change the other. The social preview is rasterized from an
+in-memory SVG through headless Chrome, the only rasterizer these machines have.
