@@ -1,5 +1,5 @@
-name: "Code Comment Ratio Lint"
-description: "Fail pull requests whose added code outpaces added comments. Counted per file with tokei."
+name: "Comment Ratio"
+description: "Fail pull requests that add too many comments. Keeps comment-happy coding agents in check, counted per file with tokei."
 author: "Ignace Maes"
 
 branding:
@@ -7,16 +7,16 @@ branding:
   color: "blue"
 
 inputs:
-  threshold:
+  max-comment-density:
     description: >-
-      Maximum allowed ratio of added code lines to added comment lines.
-      A value of 10 means "at most 10 lines of code per comment line".
+      Maximum share of added lines that may be comments, as a percentage (0-100).
+      A value of 25 means "at most 1 in 4 added lines may be a comment".
     required: false
-    default: "10"
-  min-code-lines:
+    default: "25"
+  min-lines-added:
     description: >-
-      Skip the check when fewer than this many code lines were added, so tiny
-      changes are not held to the ratio.
+      Skip the check when fewer than this many lines (code plus comments) were
+      added, so tiny changes are not held to the limit.
     required: false
     default: "50"
   include:
@@ -44,7 +44,7 @@ inputs:
     required: false
     default: ""
   fail-on-threshold:
-    description: "Fail the job when the ratio exceeds the threshold. Set to false to only report."
+    description: "Fail the job when the density exceeds the limit. Set to false to only report."
     required: false
     default: "true"
   comment:
@@ -75,12 +75,12 @@ outputs:
     description: "Lines of code added (sum of positive per-file deltas)."
   comments-added:
     description: "Lines of comments added (sum of positive per-file deltas)."
-  ratio:
-    description: "Code lines added per comment line added, with two decimals. 'Infinity' when no comments were added."
+  comment-density:
+    description: "Share of added lines that are comments, as a percentage with two decimals."
   status:
-    description: "One of pass, fail or skip."
+    description: "One of pass, fail or skip. 'skip' means below min-lines-added or no countable files."
   passed:
-    description: "'true' unless the ratio exceeded the threshold."
+    description: "'true' unless the density exceeded the limit."
   report:
     description: "The Markdown report that was posted to the pull request and job summary."
 

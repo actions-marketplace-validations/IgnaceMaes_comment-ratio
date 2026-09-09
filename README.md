@@ -1,15 +1,19 @@
 <div align="center">
 
-# Code Comment Ratio Lint
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.svg">
+  <img alt="comment-ratio" src=".github/assets/banner-light.svg" width="720">
+</picture>
 
-**Fail pull requests whose added code outpaces added comments.**
+**Fail pull requests that add too many comments.**
 
-Counts code and comment lines per changed file with [tokei](https://github.com/XAMPPRocky/tokei), compares
-before and after, and posts a sticky report on the pull request.
+Coding agents love to narrate every line. This action counts the code and comment lines a pull
+request adds with [tokei](https://github.com/XAMPPRocky/tokei), and fails the check when comments
+take up more than their share.
 
-[![CI](https://github.com/IgnaceMaes/code-comment-ratio-lint/actions/workflows/ci.yml/badge.svg)](https://github.com/IgnaceMaes/code-comment-ratio-lint/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/IgnaceMaes/code-comment-ratio-lint?display_name=tag&sort=semver)](https://github.com/IgnaceMaes/code-comment-ratio-lint/releases)
-[![Marketplace](https://img.shields.io/badge/marketplace-code--comment--ratio--lint-blue?logo=github)](https://github.com/marketplace/actions/code-comment-ratio-lint)
+[![CI](https://github.com/IgnaceMaes/comment-ratio/actions/workflows/ci.yml/badge.svg)](https://github.com/IgnaceMaes/comment-ratio/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/IgnaceMaes/comment-ratio?display_name=tag&sort=semver)](https://github.com/IgnaceMaes/comment-ratio/releases)
+[![Marketplace](https://img.shields.io/badge/marketplace-comment--ratio-blue?logo=github)](https://github.com/marketplace/actions/comment-ratio)
 [![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 
 </div>
@@ -19,8 +23,8 @@ before and after, and posts a sticky report on the pull request.
 ## Quick start
 
 ```yaml
-# .github/workflows/comment-ratio.yml
-name: Comment ratio
+# .github/workflows/comment-density.yml
+name: Comment density
 
 on:
   pull_request:
@@ -30,13 +34,13 @@ permissions:
   pull-requests: write # to post the report comment
 
 jobs:
-  ratio:
+  comments:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: IgnaceMaes/code-comment-ratio-lint@v1
+      - uses: IgnaceMaes/comment-ratio@v1
         with:
-          threshold: 10 # at most 10 lines of code per comment line
+          max-comment-density: 25 # at most 1 in 4 added lines may be a comment
 ```
 
 That's it. On every pull request the action:
@@ -45,65 +49,66 @@ That's it. On every pull request the action:
 2. Lists the files the pull request changes and counts code and comment lines in each file
    **before** and **after** the change.
 3. Sums the per-file increases into "code added" and "comments added".
-4. Fails the job when `code added / comments added` is above `threshold`.
+4. Fails the job when `comments added / (code added + comments added)` is above
+   `max-comment-density`.
 
 ### What you get
 
 Every run writes a job summary and keeps one comment on the pull request up to date:
 
-> ## ❌ Code ↔ Comment Ratio: Failed
+> ## ❌ Comment Density: Failed
 >
-> 24.3 lines of code were added per comment line; the limit is 10.
+> 38.2% of the added lines are comments (149 of 390); the limit is 25%.
 >
 > |             | Code | Comments |
 > | :---------- | ---: | -------: |
-> | **Added**   | +389 |      +16 |
+> | **Added**   | +241 |     +149 |
 > | **Removed** |  −42 |       −3 |
-> | **Net**     | +347 |      +13 |
+> | **Net**     | +199 |     +146 |
 >
-> **Ratio** 24.3 : 1 · **Threshold** 10 : 1 · **Comment density** 4.0%
+> **Comment density** 38.2% · **Limit** 25%
 >
 > <details><summary>4 files analyzed</summary>
 >
-> | File                      | Language   | Code Δ | Comments Δ |   Ratio |
-> | :------------------------ | :--------- | -----: | ---------: | ------: |
-> | `src/scheduler/queue.ts`  | TypeScript |   +301 |         +4 | 75.3 ⚠️ |
-> | `src/scheduler/worker.ts` | TypeScript |    +88 |         +9 |     9.8 |
-> | `src/legacy/poll.ts`      | TypeScript |    −42 |         −3 |       – |
-> | `src/index.ts`            | TypeScript |      0 |         +3 |       – |
+> | File                      | Language   | Code Δ | Comments Δ |  Density |
+> | :------------------------ | :--------- | -----: | ---------: | -------: |
+> | `src/scheduler/queue.ts`  | TypeScript |   +153 |       +131 | 46.1% ⚠️ |
+> | `src/scheduler/worker.ts` | TypeScript |    +88 |        +15 |    14.6% |
+> | `src/index.ts`            | TypeScript |      0 |         +3 |  100% ⚠️ |
+> | `src/legacy/poll.ts`      | TypeScript |    −42 |         −3 |        – |
 >
 > </details>
 >
-> <sub>Code and comment lines are counted per changed file before and after the change; positive deltas are summed. Comparing `4f2c1a9…b81e0d3`, counted with tokei 12.1.2.</sub>
+> <sub>Density is the share of comment lines among all lines added. Lines are counted per changed file before and after the change; positive deltas are summed. Comparing `4f2c1a9…b81e0d3`, counted with tokei 12.1.2.</sub>
 
-Files that exceed the threshold on their own also get a warning annotation in the **Files changed** tab.
+Files that exceed the limit on their own also get a warning annotation in the **Files changed** tab.
 
 ## Inputs
 
-| Input               | Default                                                       | Description                                                                                                                                      |
-| :------------------ | :------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `threshold`         | `10`                                                          | Maximum allowed ratio of added code lines to added comment lines. The job fails when the ratio is **above** this value.                          |
-| `min-code-lines`    | `50`                                                          | Skip the check when fewer code lines were added. Keeps one-line fixes from failing on a technicality.                                            |
-| `include`           | _all files_                                                   | Newline-separated globs. When set, only matching paths are analyzed.                                                                             |
-| `exclude`           | _none_                                                        | Newline-separated globs to ignore (generated code, vendored dependencies, fixtures).                                                             |
-| `languages`         | _all languages_                                               | Comma- or newline-separated [tokei language names](https://github.com/XAMPPRocky/tokei#supported-languages) to analyze, e.g. `TypeScript, Rust`. |
-| `exclude-languages` | `Markdown, Plain Text, ReStructuredText, AsciiDoc, Org, Djot` | Languages to ignore. tokei counts prose as comments, so docs are excluded by default. Pass `none` to include everything.                         |
-| `fail-on-threshold` | `true`                                                        | Set to `false` to report without failing the job.                                                                                                |
-| `comment`           | `true`                                                        | Post and keep updating a sticky comment on the pull request.                                                                                     |
-| `github-token`      | `${{ github.token }}`                                         | Token used to comment and to resolve the merge base through the API.                                                                             |
-| `tokei-version`     | `12.1.2`                                                      | tokei release to download, or `system` to use a tokei already on `PATH`. See [tokei versions](#tokei-versions).                                  |
-| `base` / `head`     | _from the event_                                              | Commit-ish pair to compare. Required for events that carry no range (e.g. `workflow_dispatch`).                                                  |
+| Input                 | Default                                                       | Description                                                                                                                                      |
+| :-------------------- | :------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `max-comment-density` | `25`                                                          | Maximum share of added lines that may be comments, in percent. `25` or `25%` both work. The job fails when the density is **above** this value.  |
+| `min-lines-added`     | `50`                                                          | Skip the check when fewer lines (code plus comments) were added. Keeps a three-line fix with one comment from failing on a technicality.         |
+| `include`             | _all files_                                                   | Newline-separated globs. When set, only matching paths are analyzed.                                                                             |
+| `exclude`             | _none_                                                        | Newline-separated globs to ignore (generated code, vendored dependencies, fixtures).                                                             |
+| `languages`           | _all languages_                                               | Comma- or newline-separated [tokei language names](https://github.com/XAMPPRocky/tokei#supported-languages) to analyze, e.g. `TypeScript, Rust`. |
+| `exclude-languages`   | `Markdown, Plain Text, ReStructuredText, AsciiDoc, Org, Djot` | Languages to ignore. tokei counts prose as comments, so docs are excluded by default. Pass `none` to include everything.                         |
+| `fail-on-threshold`   | `true`                                                        | Set to `false` to report without failing the job.                                                                                                |
+| `comment`             | `true`                                                        | Post and keep updating a sticky comment on the pull request.                                                                                     |
+| `github-token`        | `${{ github.token }}`                                         | Token used to comment and to resolve the merge base through the API.                                                                             |
+| `tokei-version`       | `12.1.2`                                                      | tokei release to download, or `system` to use a tokei already on `PATH`. See [tokei versions](#tokei-versions).                                  |
+| `base` / `head`       | _from the event_                                              | Commit-ish pair to compare. Required for events that carry no range (e.g. `workflow_dispatch`).                                                  |
 
 ## Outputs
 
-| Output           | Example                | Description                                                                       |
-| :--------------- | :--------------------- | :-------------------------------------------------------------------------------- |
-| `code-added`     | `389`                  | Code lines added (sum of positive per-file deltas).                               |
-| `comments-added` | `16`                   | Comment lines added.                                                              |
-| `ratio`          | `24.31` or `Infinity`  | Code lines per comment line, two decimals.                                        |
-| `status`         | `pass`, `fail`, `skip` | Outcome of the check. `skip` means below `min-code-lines` or no countable files.  |
-| `passed`         | `true` / `false`       | `false` only when the threshold was exceeded (regardless of `fail-on-threshold`). |
-| `report`         | Markdown               | The full report, for use in other steps.                                          |
+| Output            | Example                | Description                                                                       |
+| :---------------- | :--------------------- | :-------------------------------------------------------------------------------- |
+| `code-added`      | `241`                  | Code lines added (sum of positive per-file deltas).                               |
+| `comments-added`  | `149`                  | Comment lines added.                                                              |
+| `comment-density` | `38.21`                | Share of added lines that are comments, in percent with two decimals.             |
+| `status`          | `pass`, `fail`, `skip` | Outcome of the check. `skip` means below `min-lines-added` or no countable files. |
+| `passed`          | `true` / `false`       | `false` only when the limit was exceeded (regardless of `fail-on-threshold`).     |
+| `report`          | Markdown               | The full report, for use in other steps.                                          |
 
 ## How it works
 
@@ -128,7 +133,7 @@ So instead of reading the diff, the action reads the **file contents on both sid
 
         totals:    code added     = Σ max(Δcode, 0)
                    comments added = Σ max(Δcomments, 0)
-                   ratio          = code added / comments added
+                   density        = comments added / (code added + comments added)
 ```
 
 Only changed files are materialized, so the run takes seconds even on large repositories.
@@ -138,26 +143,25 @@ The base of the comparison is the **merge base** of the pull request, so a branc
 behind `main` is not blamed for changes it didn't make. The action fetches the commits it needs on
 its own; the default shallow `actions/checkout` is fine.
 
-### Choosing a threshold
+### Choosing a limit
 
-The threshold is "lines of code per line of comment". If you think in comment density instead:
+Density is "comment lines as a share of all lines added". Some reference points:
 
-| Threshold | Comment density |
-| --------: | --------------: |
-|       `4` |             20% |
-|       `9` |             10% |
-|      `19` |              5% |
+| Density | What it looks like                                                          |
+| ------: | :-------------------------------------------------------------------------- |
+|     10% | Terse. A comment every ten lines, usually a doc comment per function.       |
+|     25% | The default. Doc comments on public APIs plus the occasional "why" comment. |
+|     40% | Every other statement has a comment. Typical unedited agent output.         |
 
-A pull request that adds code and **no comments at all** has an infinite ratio and fails
-whatever the threshold, as long as it adds at least `min-code-lines` lines of code. Pull
-requests that only delete code always pass.
+A pull request that only adds comments has a density of 100% and fails; one that only removes
+comments has a density of 0% and passes. Both are on purpose.
 
 ## Recipes
 
 ### Only check application code
 
 ```yaml
-- uses: IgnaceMaes/code-comment-ratio-lint@v1
+- uses: IgnaceMaes/comment-ratio@v1
   with:
     include: |
       src/**
@@ -171,7 +175,7 @@ requests that only delete code always pass.
 ### Only a few languages
 
 ```yaml
-- uses: IgnaceMaes/code-comment-ratio-lint@v1
+- uses: IgnaceMaes/comment-ratio@v1
   with:
     languages: TypeScript, TSX, Rust
 ```
@@ -182,7 +186,7 @@ Useful while a team is easing into the rule. The comment and job summary still a
 `outputs.passed` still reflects the verdict.
 
 ```yaml
-- uses: IgnaceMaes/code-comment-ratio-lint@v1
+- uses: IgnaceMaes/comment-ratio@v1
   with:
     fail-on-threshold: false
 ```
@@ -190,12 +194,12 @@ Useful while a team is easing into the rule. The comment and job summary still a
 ### Use the outputs
 
 ```yaml
-- uses: IgnaceMaes/code-comment-ratio-lint@v1
-  id: ratio
+- uses: IgnaceMaes/comment-ratio@v1
+  id: comments
   with:
     fail-on-threshold: false
-- if: steps.ratio.outputs.status == 'fail'
-  run: echo "::notice::Ratio is ${{ steps.ratio.outputs.ratio }}; consider a docs pass."
+- if: steps.comments.outputs.status == 'fail'
+  run: echo "::notice::${{ steps.comments.outputs.comment-density }}% of added lines are comments."
 ```
 
 ### Push events and manual runs
@@ -211,11 +215,11 @@ on:
       head: { required: true }
 
 jobs:
-  ratio:
+  comments:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: IgnaceMaes/code-comment-ratio-lint@v1
+      - uses: IgnaceMaes/comment-ratio@v1
         with:
           base: ${{ inputs.base }}
           head: ${{ inputs.head }}
@@ -232,7 +236,7 @@ step and point the action at it:
 - uses: taiki-e/install-action@v2
   with:
     tool: tokei@15.0.0
-- uses: IgnaceMaes/code-comment-ratio-lint@v1
+- uses: IgnaceMaes/comment-ratio@v1
   with:
     tokei-version: system
 ```
@@ -242,8 +246,8 @@ The action works with tokei 12 through 15 (the JSON schema is the same).
 ## FAQ
 
 **Why are Markdown and other docs excluded by default?**
-tokei counts every line of prose as a comment. A large README edit would otherwise let an
-uncommented code change slip through. Set `exclude-languages: none` to include them anyway.
+tokei counts every line of prose as a comment. A README edit would otherwise push the density up
+and fail a perfectly fine pull request. Set `exclude-languages: none` to include them anyway.
 
 **Does it work for pull requests from forks?**
 Yes. The check runs with the read-only token forks receive; only the comment is skipped (with a
@@ -252,12 +256,15 @@ and understand [its security implications](https://securitylab.github.com/resear
 
 **Does moving code around count as "added"?**
 A pure rename is detected by git and contributes nothing. Moving a function from one file to
-another counts the destination file's increase, so the moved code is judged on its comments,
-the same as new code.
+another counts the destination file's increase, so moved code is judged on its comments the same
+as new code.
 
 **Which lines are "comments"?**
 Whatever tokei says: line comments, block comments, doc comments and docstrings. Commented-out
 code is a comment too; this action doesn't try to tell the difference.
+
+**Can it enforce a minimum instead?**
+Not today. The action was built to catch over-commented changes, so the limit is a maximum.
 
 **Can I run it on macOS or Windows runners?**
 Yes. Prebuilt tokei binaries exist for Linux (x64, arm64), macOS (Apple Silicon runs the x64

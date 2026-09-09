@@ -3,13 +3,13 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as core from "@actions/core";
 import * as github from "@actions/github";
-import { analyze, type Analysis, formatRatio } from "./analyze.js";
+import { analyze, type Analysis, fileDensity, formatPercent } from "./analyze.js";
 import { upsertComment } from "./comment.js";
 import { createLanguageFilter, createPathFilter } from "./filter.js";
 import { listChangedFiles, materialize } from "./git.js";
 import { type Inputs, parseInputs } from "./inputs.js";
 import { rangeFromContext, resolveRange } from "./range.js";
-import { fileRatio, renderMarkdown } from "./report.js";
+import { renderMarkdown } from "./report.js";
 import { resolveTokei, tokeiVersion } from "./tokei/install.js";
 import { countDirectory } from "./tokei/run.js";
 
@@ -58,8 +58,8 @@ export async function run(): Promise<void> {
       changes,
       base,
       head,
-      threshold: inputs.threshold,
-      minCodeLines: inputs.minCodeLines,
+      maxDensity: inputs.maxCommentDensity,
+      minLinesAdded: inputs.minLinesAdded,
       languageFilter: createLanguageFilter(inputs.languages, inputs.excludeLanguages),
     });
   } finally {
@@ -80,7 +80,7 @@ export async function run(): Promise<void> {
 function setOutputs(analysis: Analysis | undefined, report = ""): void {
   core.setOutput("code-added", analysis?.totals.codeAdded ?? 0);
   core.setOutput("comments-added", analysis?.totals.commentsAdded ?? 0);
-  core.setOutput("ratio", analysis ? formatRatioOutput(analysis.ratio) : "0");
+  core.setOutput("comment-density", analysis ? analysis.density.toFixed(2) : "0.00");
   core.setOutput("status", analysis?.verdict.status ?? "skip");
   core.setOutput("passed", analysis ? String(analysis.verdict.status !== "fail") : "true");
   core.setOutput("report", report);
@@ -89,10 +89,6 @@ function setOutputs(analysis: Analysis | undefined, report = ""): void {
 /** `tokei 12.1.2 compiled with ...` -> `12.1.2` */
 function parseVersion(versionOutput: string): string {
   return versionOutput.replace(/^tokei\s+/, "").split(/\s+/)[0] ?? versionOutput;
-}
-
-function formatRatioOutput(ratio: number): string {
-  return Number.isFinite(ratio) ? ratio.toFixed(2) : "Infinity";
 }
 
 async function publishComment(
@@ -119,10 +115,10 @@ async function publishComment(
 }
 
 function conclude(inputs: Inputs, analysis: Analysis): void {
-  const { verdict, totals, ratio, threshold } = analysis;
+  const { verdict, totals, density, maxDensity } = analysis;
   const headline =
     `${totals.codeAdded} code lines and ${totals.commentsAdded} comment lines added ` +
-    `(ratio ${formatRatio(ratio)}, threshold ${formatRatio(threshold)})`;
+    `(density ${formatPercent(density)}, limit ${formatPercent(maxDensity)})`;
 
   switch (verdict.status) {
     case "pass":
@@ -133,7 +129,7 @@ function conclude(inputs: Inputs, analysis: Analysis): void {
       return;
     case "fail": {
       annotateWorstFiles(analysis);
-      const message = `Comment ratio check failed: ${verdict.reason}`;
+      const message = `Comment density check failed: ${verdict.reason}`;
       if (inputs.failOnThreshold) {
         core.setFailed(message);
       } else {
@@ -150,16 +146,16 @@ function conclude(inputs: Inputs, analysis: Analysis): void {
 function annotateWorstFiles(analysis: Analysis): void {
   const offenders = analysis.files
     .filter((file) => {
-      const ratio = fileRatio(file);
-      return ratio !== undefined && ratio > analysis.threshold;
+      const density = fileDensity(file);
+      return density !== undefined && density > analysis.maxDensity;
     })
     .slice(0, MAX_FILE_ANNOTATIONS);
   for (const file of offenders) {
-    const ratio = fileRatio(file) ?? 0;
+    const density = fileDensity(file) ?? 0;
     core.warning(
-      `+${file.codeDelta} code / +${Math.max(file.commentsDelta, 0)} comment lines ` +
-        `(ratio ${formatRatio(ratio)}, threshold ${formatRatio(analysis.threshold)})`,
-      { file: file.path, title: "Sparse comments" },
+      `+${Math.max(file.codeDelta, 0)} code / +${Math.max(file.commentsDelta, 0)} comment lines ` +
+        `(density ${formatPercent(density)}, limit ${formatPercent(analysis.maxDensity)})`,
+      { file: file.path, title: "Comment-heavy change" },
     );
   }
 }

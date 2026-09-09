@@ -47,18 +47,18 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v5
-      - name: Code comment ratio
-        id: ratio
+      - name: Comment density
+        id: density
         uses: ./
         with:
-          threshold: 10
-          min-code-lines: 50
+          max-comment-density: 40
+          min-lines-added: 50
           exclude: |
             dist/**
             tests/fixtures/**
       - run: |
-          echo "status=${{ steps.ratio.outputs.status }}"
-          echo "ratio=${{ steps.ratio.outputs.ratio }}"
+          echo "status=${{ steps.density.outputs.status }}"
+          echo "density=${{ steps.density.outputs.comment-density }}"
 
   cross-platform:
     name: Smoke test (${{ matrix.os }})

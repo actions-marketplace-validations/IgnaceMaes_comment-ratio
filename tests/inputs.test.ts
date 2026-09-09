@@ -9,8 +9,8 @@ describe("parseInputs", () => {
   it("applies defaults when nothing is set", () => {
     const inputs = parseInputs(reader({}));
     expect(inputs).toMatchObject({
-      threshold: 10,
-      minCodeLines: 50,
+      maxCommentDensity: 25,
+      minLinesAdded: 50,
       include: [],
       exclude: [],
       languages: [],
@@ -26,8 +26,8 @@ describe("parseInputs", () => {
   it("parses every input", () => {
     const inputs = parseInputs(
       reader({
-        threshold: "4.5",
-        "min-code-lines": "0",
+        "max-comment-density": "12.5%",
+        "min-lines-added": "0",
         include: "src/**\nlib/**",
         exclude: "**/*.test.ts, **/generated/**",
         languages: "TypeScript, Rust",
@@ -41,8 +41,8 @@ describe("parseInputs", () => {
       }),
     );
     expect(inputs).toEqual({
-      threshold: 4.5,
-      minCodeLines: 0,
+      maxCommentDensity: 12.5,
+      minLinesAdded: 0,
       include: ["src/**", "lib/**"],
       exclude: ["**/*.test.ts", "**/generated/**"],
       languages: ["TypeScript", "Rust"],
@@ -56,6 +56,11 @@ describe("parseInputs", () => {
     });
   });
 
+  it("accepts 0 and 100 as density bounds", () => {
+    expect(parseInputs(reader({ "max-comment-density": "0" })).maxCommentDensity).toBe(0);
+    expect(parseInputs(reader({ "max-comment-density": "100" })).maxCommentDensity).toBe(100);
+  });
+
   it('lets "none" clear the default language exclusions', () => {
     expect(parseInputs(reader({ "exclude-languages": "None" })).excludeLanguages).toEqual([]);
   });
@@ -65,11 +70,11 @@ describe("parseInputs", () => {
   });
 
   it.each([
-    ["threshold", "0"],
-    ["threshold", "-1"],
-    ["threshold", "ten"],
-    ["min-code-lines", "-5"],
-    ["min-code-lines", "1.5"],
+    ["max-comment-density", "-1"],
+    ["max-comment-density", "101"],
+    ["max-comment-density", "lots"],
+    ["min-lines-added", "-5"],
+    ["min-lines-added", "1.5"],
     ["fail-on-threshold", "maybe"],
     ["tokei-version", "latest"],
   ])("rejects invalid %s=%s", (name, value) => {

@@ -15,10 +15,10 @@ export const DEFAULT_EXCLUDED_LANGUAGES = [
 export const DEFAULT_TOKEI_VERSION = "12.1.2";
 
 export interface Inputs {
-  /** Maximum allowed ratio of added code lines to added comment lines. */
-  threshold: number;
-  /** Skip the check when fewer code lines than this were added. */
-  minCodeLines: number;
+  /** Maximum share of added lines that may be comments, in percent. */
+  maxCommentDensity: number;
+  /** Skip the check when fewer lines (code + comments) than this were added. */
+  minLinesAdded: number;
   /** Glob patterns; when non-empty only matching paths are analyzed. */
   include: string[];
   /** Glob patterns; matching paths are ignored. */
@@ -27,7 +27,7 @@ export interface Inputs {
   languages: string[];
   /** tokei language names to ignore. */
   excludeLanguages: string[];
-  /** Whether exceeding the threshold fails the job. */
+  /** Whether exceeding the density limit fails the job. */
   failOnThreshold: boolean;
   /** Whether to post or update a sticky pull request comment. */
   comment: boolean;
@@ -48,15 +48,17 @@ export class InputError extends Error {
 
 /** Parse and validate raw action inputs. Pure so it can be unit-tested. */
 export function parseInputs(read: InputReader): Inputs {
-  const threshold = parseNumber(read, "threshold", 10);
-  if (!(threshold > 0)) {
-    throw new InputError(`"threshold" must be a positive number, got "${read("threshold")}"`);
+  const maxCommentDensity = parsePercent(read, "max-comment-density", 25);
+  if (!(maxCommentDensity >= 0 && maxCommentDensity <= 100)) {
+    throw new InputError(
+      `"max-comment-density" must be a percentage between 0 and 100, got "${read("max-comment-density")}"`,
+    );
   }
 
-  const minCodeLines = parseNumber(read, "min-code-lines", 50);
-  if (!Number.isInteger(minCodeLines) || minCodeLines < 0) {
+  const minLinesAdded = parseNumber(read, "min-lines-added", 50);
+  if (!Number.isInteger(minLinesAdded) || minLinesAdded < 0) {
     throw new InputError(
-      `"min-code-lines" must be a non-negative integer, got "${read("min-code-lines")}"`,
+      `"min-lines-added" must be a non-negative integer, got "${read("min-lines-added")}"`,
     );
   }
 
@@ -65,8 +67,8 @@ export function parseInputs(read: InputReader): Inputs {
   const excludeLanguages = parseExcludeLanguages(read("exclude-languages"));
 
   return {
-    threshold,
-    minCodeLines,
+    maxCommentDensity,
+    minLinesAdded,
     include: parseList(read("include")),
     exclude: parseList(read("exclude")),
     languages: parseList(read("languages")),
@@ -91,6 +93,11 @@ function parseExcludeLanguages(raw: string): string[] {
 function optional<K extends string>(key: K, value: string): { [P in K]?: string } {
   const trimmed = value.trim();
   return trimmed === "" ? {} : ({ [key]: trimmed } as { [P in K]: string });
+}
+
+/** Accepts `25` or `25%`. */
+function parsePercent(read: InputReader, name: string, fallback: number): number {
+  return parseNumber((key) => read(key).trim().replace(/%$/, ""), name, fallback);
 }
 
 function parseNumber(read: InputReader, name: string, fallback: number): number {

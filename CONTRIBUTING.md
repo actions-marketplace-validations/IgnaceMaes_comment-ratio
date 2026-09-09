@@ -32,7 +32,7 @@ src/range.ts        Which commits to compare, merge-base resolution
 src/git.ts          Changed-file listing and blob materialization
 src/tokei/          Download/cache tokei and parse its JSON
 src/filter.ts       Include/exclude globs and language filters
-src/analyze.ts      Pure delta/ratio/verdict computation
+src/analyze.ts      Pure delta/density/verdict computation
 src/report.ts       Markdown rendering
 src/comment.ts      Sticky pull request comment
 dist/index.js       Bundled output, committed (see below)
@@ -65,8 +65,8 @@ cd path/to/some/repo
 echo '{"pull_request":{"number":1,"base":{"sha":"<base>"},"head":{"sha":"<head>"}}}' > /tmp/event.json
 env GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH=/tmp/event.json \
     GITHUB_REPOSITORY=acme/demo GITHUB_OUTPUT=/tmp/out.txt \
-    INPUT_COMMENT=false "INPUT_TOKEI-VERSION=system" INPUT_THRESHOLD=10 \
-    node path/to/code-comment-ratio-lint/dist/index.js
+    INPUT_COMMENT=false "INPUT_TOKEI-VERSION=system" "INPUT_MAX-COMMENT-DENSITY=25" \
+    node path/to/comment-ratio/dist/index.js
 ```
 
 ## Pull requests
@@ -75,6 +75,22 @@ env GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH=/tmp/event.json \
 2. Run `pnpm check`.
 3. Run `pnpm changeset` if users would notice the change, and commit the generated file.
 4. Rebuild and commit `dist/`.
+
+## Marketplace listing
+
+Publishing to GitHub Marketplace is a **one-time manual step** and cannot be automated: the
+"Publish this Action to the GitHub Marketplace" checkbox and its category dropdowns exist only in
+the release-draft web UI, and neither `action.yml` nor the REST releases API can set them. Because
+the Release workflow below creates releases through the API, the first release has to be drafted by
+hand at **Releases → Draft a new release**:
+
+1. Tick **Publish this Action to the GitHub Marketplace** (requires accepting the Marketplace terms).
+2. **Primary Category:** `Code quality`
+3. **Another Category:** `Code review`
+
+Categories and the `description` in `action.yml` are what Marketplace search matches on, so keep the
+description keyword-bearing and leave the categories alone on later releases; subsequent releases
+inherit the listing.
 
 ## Releasing
 

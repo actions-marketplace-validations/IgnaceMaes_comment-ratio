@@ -1,20 +1,28 @@
 {
-  "name": "code-comment-ratio-lint",
+  "name": "comment-ratio",
   "version": "0.0.0",
   "private": true,
   "description": "GitHub Action that fails pull requests whose added code outpaces added comments. Powered by tokei.",
   "keywords": [
+    "code-comment-ratio",
     "code-quality",
+    "code-review",
+    "comment-coverage",
+    "comment-density",
+    "comment-ratio",
+    "comment-to-code-ratio",
     "comments",
+    "documentation",
     "github-action",
-    "lint",
+    "github-actions",
     "pull-request",
+    "static-analysis",
     "tokei"
   ],
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/IgnaceMaes/code-comment-ratio-lint.git"
+    "url": "https://github.com/IgnaceMaes/comment-ratio.git"
   },
   "type": "module",
   "main": "dist/index.js",

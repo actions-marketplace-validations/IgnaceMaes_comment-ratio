@@ -38,10 +38,11 @@ export interface Verdict {
 export interface Analysis {
   files: FileDelta[];
   totals: Totals;
-  /** Code lines added per comment line added. `Infinity` when no comments were added. */
-  ratio: number;
-  threshold: number;
-  minCodeLines: number;
+  /** Share of added lines that are comments, in percent (0-100). */
+  density: number;
+  /** Maximum allowed density, in percent. */
+  maxDensity: number;
+  minLinesAdded: number;
   verdict: Verdict;
 }
 
@@ -49,17 +50,19 @@ export interface AnalyzeOptions {
   changes: ChangedFile[];
   base: FileStats[];
   head: FileStats[];
-  threshold: number;
-  minCodeLines: number;
+  /** Maximum allowed comment density, in percent. */
+  maxDensity: number;
+  /** Skip the check when fewer lines (code + comments) were added. */
+  minLinesAdded: number;
   languageFilter?: LanguageFilter;
 }
 
 /**
  * Join per-file counts from both sides of the diff, compute deltas and decide
- * whether the change clears the threshold. Pure: no I/O, easy to test.
+ * whether the change stays under the comment density limit. Pure: no I/O.
  */
 export function analyze(options: AnalyzeOptions): Analysis {
-  const { changes, threshold, minCodeLines } = options;
+  const { changes, maxDensity, minLinesAdded } = options;
   const languageFilter = options.languageFilter ?? (() => true);
   const baseStats = indexByPath(options.base);
   const headStats = indexByPath(options.head);
@@ -90,56 +93,68 @@ export function analyze(options: AnalyzeOptions): Analysis {
     files.push(delta);
   }
 
-  files.sort((a, b) => b.codeDelta - a.codeDelta || a.path.localeCompare(b.path));
+  // Most comment-heavy files first so the report leads with the offenders.
+  files.sort(
+    (a, b) =>
+      b.commentsDelta - a.commentsDelta ||
+      b.codeDelta - a.codeDelta ||
+      a.path.localeCompare(b.path),
+  );
 
   const totals = sumTotals(files);
-  const ratio = computeRatio(totals.codeAdded, totals.commentsAdded);
-  const verdict = decide({ totals, ratio, threshold, minCodeLines });
+  const density = commentDensity(totals.codeAdded, totals.commentsAdded);
+  const verdict = decide({ totals, density, maxDensity, minLinesAdded });
 
-  return { files, totals, ratio, threshold, minCodeLines, verdict };
+  return { files, totals, density, maxDensity, minLinesAdded, verdict };
 }
 
-export function computeRatio(codeAdded: number, commentsAdded: number): number {
-  if (codeAdded === 0) return 0;
-  if (commentsAdded === 0) return Number.POSITIVE_INFINITY;
-  return codeAdded / commentsAdded;
-}
-
-/** Ratio of comment lines to all added lines, as a percentage for display. */
-export function commentPercentage(codeAdded: number, commentsAdded: number): number {
+/** Comment lines as a percentage of all added lines. 0 when nothing was added. */
+export function commentDensity(codeAdded: number, commentsAdded: number): number {
   const total = codeAdded + commentsAdded;
   return total === 0 ? 0 : (commentsAdded / total) * 100;
 }
 
+/** Density of a single file's additions, or undefined when it added nothing. */
+export function fileDensity(file: FileDelta): number | undefined {
+  const code = Math.max(file.codeDelta, 0);
+  const comments = Math.max(file.commentsDelta, 0);
+  if (code + comments === 0) return undefined;
+  return commentDensity(code, comments);
+}
+
 function decide(input: {
   totals: Totals;
-  ratio: number;
-  threshold: number;
-  minCodeLines: number;
+  density: number;
+  maxDensity: number;
+  minLinesAdded: number;
 }): Verdict {
-  const { totals, ratio, threshold, minCodeLines } = input;
+  const { totals, density, maxDensity, minLinesAdded } = input;
+  const linesAdded = totals.codeAdded + totals.commentsAdded;
 
   if (totals.filesAnalyzed === 0) {
     return { status: "skip", reason: "No files with countable source code changed." };
   }
-  if (totals.codeAdded < minCodeLines) {
+  if (linesAdded < minLinesAdded) {
     return {
       status: "skip",
       reason:
-        `Only ${plural(totals.codeAdded, "line")} of code added, ` +
-        `below the minimum of ${minCodeLines} for this check to apply.`,
+        `Only ${plural(linesAdded, "line")} added, ` +
+        `below the minimum of ${minLinesAdded} for this check to apply.`,
     };
   }
-  if (ratio > threshold) {
-    const detail =
-      totals.commentsAdded === 0
-        ? `${plural(totals.codeAdded, "line")} of code were added without a single comment line.`
-        : `${formatRatio(ratio)} lines of code were added per comment line; the limit is ${formatRatio(threshold)}.`;
-    return { status: "fail", reason: detail };
+  if (density > maxDensity) {
+    return {
+      status: "fail",
+      reason:
+        `${formatPercent(density)} of the added lines are comments ` +
+        `(${totals.commentsAdded} of ${linesAdded}); the limit is ${formatPercent(maxDensity)}.`,
+    };
   }
   return {
     status: "pass",
-    reason: `${formatRatio(ratio)} lines of code per comment line, within the limit of ${formatRatio(threshold)}.`,
+    reason:
+      `${formatPercent(density)} of the added lines are comments ` +
+      `(${totals.commentsAdded} of ${linesAdded}), within the limit of ${formatPercent(maxDensity)}.`,
   };
 }
 
@@ -173,11 +188,10 @@ function toLineStats(stats: FileStats | undefined): LineStats {
   return { code: stats.code, comments: stats.comments, blanks: stats.blanks };
 }
 
-/** Format a ratio for humans: `∞`, integers without decimals, otherwise one decimal. */
-export function formatRatio(ratio: number): string {
-  if (!Number.isFinite(ratio)) return "∞";
-  if (Number.isInteger(ratio)) return String(ratio);
-  return ratio.toFixed(1);
+/** `12.5%`, `25%`: one decimal unless the value is a whole number. */
+export function formatPercent(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
+  return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}%`;
 }
 
 export function plural(count: number, noun: string): string {
