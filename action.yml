@@ -1,6 +1,6 @@
 name: "Code Comment Ratio Lint"
 description: "Fail pull requests whose added code outpaces added comments. Counted per file with tokei."
-author: "Ignace"
+author: "Ignace Maes"
 
 branding:
   icon: "message-square"

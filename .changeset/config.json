@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/@changesets/config@3.0.2/schema.json",
-  "changelog": ["@changesets/changelog-github", { "repo": "ignace/code-comment-ratio-lint" }],
+  "changelog": ["@changesets/changelog-github", { "repo": "IgnaceMaes/code-comment-ratio-lint" }],
   "commit": false,
   "access": "restricted",
   "baseBranch": "main",

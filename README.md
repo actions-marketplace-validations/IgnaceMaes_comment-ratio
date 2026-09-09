@@ -7,8 +7,8 @@
 Counts code and comment lines per changed file with [tokei](https://github.com/XAMPPRocky/tokei), compares
 before and after, and posts a sticky report on the pull request.
 
-[![CI](https://github.com/ignace/code-comment-ratio-lint/actions/workflows/ci.yml/badge.svg)](https://github.com/ignace/code-comment-ratio-lint/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/ignace/code-comment-ratio-lint?display_name=tag&sort=semver)](https://github.com/ignace/code-comment-ratio-lint/releases)
+[![CI](https://github.com/IgnaceMaes/code-comment-ratio-lint/actions/workflows/ci.yml/badge.svg)](https://github.com/IgnaceMaes/code-comment-ratio-lint/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/IgnaceMaes/code-comment-ratio-lint?display_name=tag&sort=semver)](https://github.com/IgnaceMaes/code-comment-ratio-lint/releases)
 [![Marketplace](https://img.shields.io/badge/marketplace-code--comment--ratio--lint-blue?logo=github)](https://github.com/marketplace/actions/code-comment-ratio-lint)
 [![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: ignace/code-comment-ratio-lint@v1
+      - uses: IgnaceMaes/code-comment-ratio-lint@v1
         with:
           threshold: 10 # at most 10 lines of code per comment line
 ```
@@ -157,7 +157,7 @@ requests that only delete code always pass.
 ### Only check application code
 
 ```yaml
-- uses: ignace/code-comment-ratio-lint@v1
+- uses: IgnaceMaes/code-comment-ratio-lint@v1
   with:
     include: |
       src/**
@@ -171,7 +171,7 @@ requests that only delete code always pass.
 ### Only a few languages
 
 ```yaml
-- uses: ignace/code-comment-ratio-lint@v1
+- uses: IgnaceMaes/code-comment-ratio-lint@v1
   with:
     languages: TypeScript, TSX, Rust
 ```
@@ -182,7 +182,7 @@ Useful while a team is easing into the rule. The comment and job summary still a
 `outputs.passed` still reflects the verdict.
 
 ```yaml
-- uses: ignace/code-comment-ratio-lint@v1
+- uses: IgnaceMaes/code-comment-ratio-lint@v1
   with:
     fail-on-threshold: false
 ```
@@ -190,7 +190,7 @@ Useful while a team is easing into the rule. The comment and job summary still a
 ### Use the outputs
 
 ```yaml
-- uses: ignace/code-comment-ratio-lint@v1
+- uses: IgnaceMaes/code-comment-ratio-lint@v1
   id: ratio
   with:
     fail-on-threshold: false
@@ -215,7 +215,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: ignace/code-comment-ratio-lint@v1
+      - uses: IgnaceMaes/code-comment-ratio-lint@v1
         with:
           base: ${{ inputs.base }}
           head: ${{ inputs.head }}
@@ -232,7 +232,7 @@ step and point the action at it:
 - uses: taiki-e/install-action@v2
   with:
     tool: tokei@15.0.0
-- uses: ignace/code-comment-ratio-lint@v1
+- uses: IgnaceMaes/code-comment-ratio-lint@v1
   with:
     tokei-version: system
 ```
