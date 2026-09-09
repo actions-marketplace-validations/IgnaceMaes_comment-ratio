@@ -99,9 +99,11 @@ Releases are driven by [changesets](https://github.com/changesets/changesets):
 1. Pull requests carry changeset files describing their user-facing changes.
 2. On every push to `main`, the **Release** workflow collects pending changesets into a
    "chore: version packages" pull request that bumps `package.json` and `CHANGELOG.md`.
-3. Merging that pull request runs `changeset tag`, which creates the `vX.Y.Z` tag. The workflow
-   then publishes a GitHub Release with the changelog section and moves the floating major tag
-   (`v1`) so `uses: ...@v1` picks the new version up.
+3. Merging that pull request leaves `main` on a version that has no tag yet, so the workflow's
+   "Tag and publish release" step pushes the `vX.Y.Z` tag, publishes a GitHub Release with that
+   version's changelog section, and moves the floating major tag (`v1`) so `uses: ...@v1` picks
+   the new version up. The step compares `package.json` against the pushed tags rather than
+   trusting the changesets action's `published` output, which only ever fires for npm publishes.
 
 Requirements on the repository: under **Settings → Actions → General**, allow GitHub Actions to
 create and approve pull requests. Note that CI does not run on pull requests opened with the

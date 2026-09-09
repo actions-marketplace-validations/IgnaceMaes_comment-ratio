@@ -25,21 +25,22 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
-      # With pending changesets this opens/updates the "Version Packages" PR.
-      # Without any, it runs `changeset tag` so a freshly merged version gets its git tag.
-      - name: Create release pull request or tag
-        id: changesets
+      # With pending changesets this opens/updates the "Version Packages" pull
+      # request. With none, it does nothing and the next step cuts the release.
+      - name: Create release pull request
         uses: changesets/action@v1
         with:
           version: pnpm release:version
-          publish: pnpm changeset tag
           commit: "chore: version packages"
           title: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish GitHub release and move major tag
-        if: steps.changesets.outputs.published == 'true'
+      # Deliberately not driven by the action's `published` output: it only
+      # recognises npm publish output, so for a git-tag-only release it is
+      # never true. Comparing package.json against the pushed tags is the
+      # thing we actually care about, and is safe to re-run.
+      - name: Tag and publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -48,16 +49,31 @@ jobs:
           tag="v${version}"
           major="v${version%%.*}"
 
-          # Extract this version's section from CHANGELOG.md as the release body.
+          if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "${tag} is already released; nothing to do."
+            exit 0
+          fi
+
+          # This version's section of the changelog becomes the release body.
           awk -v v="## ${version}" '
             $0 == v { found = 1; next }
             found && /^## / { exit }
             found { print }
           ' CHANGELOG.md > release-notes.md
 
-          gh release create "${tag}" --title "${tag}" --notes-file release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "::error::No CHANGELOG.md section found for ${version}."
+            exit 1
+          fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -f "${major}" "${tag}"
+
+          git tag -a "${tag}" -m "${tag}"
+          git push origin "${tag}"
+
+          gh release create "${tag}" --title "${tag}" --notes-file release-notes.md
+
+          # Consumers pin the floating major tag, so move it to this release.
+          git tag -f -a "${major}" -m "${major}" "${tag}"
           git push -f origin "${major}"
