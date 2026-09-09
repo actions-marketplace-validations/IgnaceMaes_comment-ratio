@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency: release-${{ github.ref }}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: Version or tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # With pending changesets this opens/updates the "Version Packages" PR.
+      # Without any, it runs `changeset tag` so a freshly merged version gets its git tag.
+      - name: Create release pull request or tag
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: pnpm release:version
+          publish: pnpm changeset tag
+          commit: "chore: version packages"
+          title: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish GitHub release and move major tag
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          tag="v${version}"
+          major="v${version%%.*}"
+
+          # Extract this version's section from CHANGELOG.md as the release body.
+          awk -v v="## ${version}" '
+            $0 == v { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+
+          gh release create "${tag}" --title "${tag}" --notes-file release-notes.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f "${major}" "${tag}"
+          git push -f origin "${major}"

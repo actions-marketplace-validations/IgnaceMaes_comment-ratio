@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - name: Ensure dist/ is up to date
+        run: |
+          if ! git diff --quiet -- dist; then
+            echo "::error::dist/ is out of date. Run 'pnpm build' and commit the result."
+            git --no-pager diff --stat -- dist
+            exit 1
+          fi
+
+  self-test:
+    name: Run the action on this pull request
+    if: github.event_name == 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+      - name: Code comment ratio
+        id: ratio
+        uses: ./
+        with:
+          threshold: 10
+          min-code-lines: 50
+          exclude: |
+            dist/**
+            tests/fixtures/**
+      - run: |
+          echo "status=${{ steps.ratio.outputs.status }}"
+          echo "ratio=${{ steps.ratio.outputs.ratio }}"
+
+  cross-platform:
+    name: Smoke test (${{ matrix.os }})
+    if: github.event_name == 'pull_request'
+    needs: check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./
+        with:
+          comment: false
+          fail-on-threshold: false

@@ -1,0 +1,29 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`renderMarkdown > renders a failing report with totals, files and footer 1`] = `
+"<!-- code-comment-ratio-lint -->
+## ❌ Code ↔ Comment Ratio: Failed
+
+200 lines of code were added per comment line; the limit is 10.
+
+| | Code | Comments |
+|:--|--:|--:|
+| **Added** | +200 | +1 |
+| **Removed** | −10 | 0 |
+| **Net** | +190 | +1 |
+
+**Ratio** 200 : 1 &nbsp;·&nbsp; **Threshold** 10 : 1 &nbsp;·&nbsp; **Comment density** 0.5%
+
+<details>
+<summary>2 files analyzed</summary>
+
+| File | Language | Code Δ | Comments Δ | Ratio |
+|:--|:--|--:|--:|--:|
+| \`src/a.ts\` | TypeScript | +200 | +1 | 200 ⚠️ |
+| \`src/b\\|c.ts\` | TypeScript | −10 | 0 | – |
+
+</details>
+
+<sub>Code and comment lines are counted per changed file before and after the change; positive deltas are summed. Comparing \`0123456…fedcba9\`, counted with [tokei](https://github.com/XAMPPRocky/tokei) 12.1.2.</sub>
+"
+`;

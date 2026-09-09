@@ -1,0 +1,89 @@
+name: "Code Comment Ratio Lint"
+description: "Fail pull requests whose added code outpaces added comments. Counted per file with tokei."
+author: "Ignace"
+
+branding:
+  icon: "message-square"
+  color: "blue"
+
+inputs:
+  threshold:
+    description: >-
+      Maximum allowed ratio of added code lines to added comment lines.
+      A value of 10 means "at most 10 lines of code per comment line".
+    required: false
+    default: "10"
+  min-code-lines:
+    description: >-
+      Skip the check when fewer than this many code lines were added, so tiny
+      changes are not held to the ratio.
+    required: false
+    default: "50"
+  include:
+    description: >-
+      Newline-separated glob patterns. When set, only matching paths are analyzed.
+    required: false
+    default: ""
+  exclude:
+    description: >-
+      Newline-separated glob patterns for paths to ignore (generated code,
+      vendored dependencies, fixtures...).
+    required: false
+    default: ""
+  languages:
+    description: >-
+      Comma- or newline-separated tokei language names to analyze
+      (for example "TypeScript, Rust"). Empty means every language tokei recognizes.
+    required: false
+    default: ""
+  exclude-languages:
+    description: >-
+      Comma- or newline-separated tokei language names to ignore. Defaults to prose
+      formats that tokei counts as comments: Markdown, Plain Text, ReStructuredText,
+      AsciiDoc, Org and Djot. Pass "none" to include everything.
+    required: false
+    default: ""
+  fail-on-threshold:
+    description: "Fail the job when the ratio exceeds the threshold. Set to false to only report."
+    required: false
+    default: "true"
+  comment:
+    description: "Post (and keep updating) a sticky report comment on the pull request."
+    required: false
+    default: "true"
+  github-token:
+    description: "Token used to comment on the pull request and to resolve the merge base."
+    required: false
+    default: ${{ github.token }}
+  tokei-version:
+    description: >-
+      tokei release to download (only 12.x publishes prebuilt binaries), or "system"
+      to use a tokei binary already on PATH.
+    required: false
+    default: "12.1.2"
+  base:
+    description: "Base commit-ish to compare against. Defaults to the event's base (pull request base, push 'before')."
+    required: false
+    default: ""
+  head:
+    description: "Head commit-ish to analyze. Defaults to the event's head (pull request head, push 'after')."
+    required: false
+    default: ""
+
+outputs:
+  code-added:
+    description: "Lines of code added (sum of positive per-file deltas)."
+  comments-added:
+    description: "Lines of comments added (sum of positive per-file deltas)."
+  ratio:
+    description: "Code lines added per comment line added, with two decimals. 'Infinity' when no comments were added."
+  status:
+    description: "One of pass, fail or skip."
+  passed:
+    description: "'true' unless the ratio exceeded the threshold."
+  report:
+    description: "The Markdown report that was posted to the pull request and job summary."
+
+runs:
+  using: "node24"
+  main: "dist/index.js"

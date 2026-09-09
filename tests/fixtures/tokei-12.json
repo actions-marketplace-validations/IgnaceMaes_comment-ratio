@@ -1,0 +1,153 @@
+{
+  "HTML": {
+    "blanks": 0,
+    "children": {
+      "JavaScript": [
+        {
+          "name": "fx/index.html",
+          "stats": {
+            "blanks": 0,
+            "blobs": {},
+            "code": 1,
+            "comments": 1
+          }
+        }
+      ]
+    },
+    "code": 4,
+    "comments": 1,
+    "inaccurate": false,
+    "reports": [
+      {
+        "name": "fx/index.html",
+        "stats": {
+          "blanks": 0,
+          "blobs": {
+            "JavaScript": {
+              "blanks": 0,
+              "blobs": {},
+              "code": 1,
+              "comments": 1
+            }
+          },
+          "code": 4,
+          "comments": 1
+        }
+      }
+    ]
+  },
+  "JavaScript": {
+    "blanks": 0,
+    "children": {},
+    "code": 1,
+    "comments": 1,
+    "inaccurate": false,
+    "reports": [
+      {
+        "name": "fx/src/.hidden.js",
+        "stats": {
+          "blanks": 0,
+          "blobs": {},
+          "code": 1,
+          "comments": 1
+        }
+      }
+    ]
+  },
+  "Markdown": {
+    "blanks": 2,
+    "children": {},
+    "code": 0,
+    "comments": 6,
+    "inaccurate": false,
+    "reports": [
+      {
+        "name": "fx/README.md",
+        "stats": {
+          "blanks": 2,
+          "blobs": {},
+          "code": 0,
+          "comments": 6
+        }
+      }
+    ]
+  },
+  "Total": {
+    "blanks": 3,
+    "children": {
+      "Html": [
+        {
+          "name": "fx/index.html",
+          "stats": {
+            "blanks": 0,
+            "blobs": {
+              "JavaScript": {
+                "blanks": 0,
+                "blobs": {},
+                "code": 1,
+                "comments": 1
+              }
+            },
+            "code": 4,
+            "comments": 1
+          }
+        }
+      ],
+      "JavaScript": [
+        {
+          "name": "fx/src/.hidden.js",
+          "stats": {
+            "blanks": 0,
+            "blobs": {},
+            "code": 1,
+            "comments": 1
+          }
+        }
+      ],
+      "Markdown": [
+        {
+          "name": "fx/README.md",
+          "stats": {
+            "blanks": 2,
+            "blobs": {},
+            "code": 0,
+            "comments": 6
+          }
+        }
+      ],
+      "TypeScript": [
+        {
+          "name": "fx/src/a.ts",
+          "stats": {
+            "blanks": 1,
+            "blobs": {},
+            "code": 3,
+            "comments": 6
+          }
+        }
+      ]
+    },
+    "code": 8,
+    "comments": 14,
+    "inaccurate": false,
+    "reports": []
+  },
+  "TypeScript": {
+    "blanks": 1,
+    "children": {},
+    "code": 3,
+    "comments": 6,
+    "inaccurate": false,
+    "reports": [
+      {
+        "name": "fx/src/a.ts",
+        "stats": {
+          "blanks": 1,
+          "blobs": {},
+          "code": 3,
+          "comments": 6
+        }
+      }
+    ]
+  }
+}

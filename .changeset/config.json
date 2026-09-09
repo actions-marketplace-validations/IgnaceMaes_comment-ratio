@@ -1,0 +1,10 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.0.2/schema.json",
+  "changelog": ["@changesets/changelog-github", { "repo": "ignace/code-comment-ratio-lint" }],
+  "commit": false,
+  "access": "restricted",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "privatePackages": { "version": true, "tag": true },
+  "ignore": []
+}
