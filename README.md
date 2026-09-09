@@ -2,7 +2,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.svg">
-  <img alt="comment-ratio" src=".github/assets/banner-light.svg" width="720">
+  <img alt="comment-ratio" src=".github/assets/banner-light.svg" width="860">
 </picture>
 
 **Fail pull requests that add too many comments.**
@@ -12,9 +12,9 @@ request adds with [tokei](https://github.com/XAMPPRocky/tokei), and fails the ch
 take up more than their share.
 
 [![CI](https://github.com/IgnaceMaes/comment-ratio/actions/workflows/ci.yml/badge.svg)](https://github.com/IgnaceMaes/comment-ratio/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/IgnaceMaes/comment-ratio?display_name=tag&sort=semver)](https://github.com/IgnaceMaes/comment-ratio/releases)
-[![Marketplace](https://img.shields.io/badge/marketplace-comment--ratio-blue?logo=github)](https://github.com/marketplace/actions/comment-ratio)
-[![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/IgnaceMaes/comment-ratio?display_name=tag&sort=semver&color=000000)](https://github.com/IgnaceMaes/comment-ratio/releases)
+[![Marketplace](https://img.shields.io/badge/marketplace-comment--ratio-000000?logo=github)](https://github.com/marketplace/actions/comment-ratio)
+[![License: MIT](https://img.shields.io/badge/license-MIT-000000)](LICENSE)
 
 </div>
 
